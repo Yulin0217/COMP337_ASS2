@@ -29,19 +29,25 @@ def ComputeDistance(a, b):
 
 def generate_synthetic_data():
     """
-    Generate synthetic data by creating a random dataset with the same shape as the original dataset.
+    Generate synthetic data by adding normally distributed noise to the original dataset.
 
-    The function first loads the original dataset using the load_dataset function. It then uses the numpy random.rand function to generate a dataset of random numbers that has the same shape as the original dataset.
+    This function calculates the standard deviation of the original dataset and uses it to generate noise with a normal distribution centered at zero. A fraction of the standard deviation is used as the scale of the noise to ensure that the noise level is proportionate to the data variability.
 
-    The numpy random seed is set to 42 to ensure that the function generates the same synthetic data every time it is run.
+    The numpy random seed is set to 42 to ensure consistent output across different runs, making the generated data ideal for reproducible experiments and tests.
 
     Returns:
-    numpy.ndarray: The synthetic dataset
+    numpy.ndarray: The synthetic dataset, which is the original dataset perturbed by added noise.
     """
     original_data = load_dataset()
     np.random.seed(42)
-    synthetic_data = np.random.rand(*original_data.shape)
+    # Calculate the standard deviation of the original data to scale the noise
+    std = np.std(original_data)
+    # Generate noise to add to the original data
+    noise = np.random.normal(loc=0, scale=std * 0.1, size=original_data.shape) # 10% of the standard deviation
+    synthetic_data = original_data + noise
     return synthetic_data
+
+
 
 
 def initialisation(x, k):
