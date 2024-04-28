@@ -1,69 +1,111 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import math
 
 
-def load_dataset(filepath):
-    # 尝试使用空格作为分隔符加载数据
-    # 根据您的文件实际情况，可能需要调整sep参数
-    data = pd.read_csv(filepath, sep=' ', header=None,usecols=range(1, 301)).values
-    return data
+def load_dataset():
+    data = pd.read_csv('dataset', header=None, sep=' ', usecols=range(1, 301))
+    return data.values
+
+
+def generate_synthetic_data():
+    # 加载原始数据以获取维度和大小
+    original_data = load_dataset()
+    np.random.seed(42)
+    # 生成具有相同维度和数量的随机数据
+    synthetic_data = np.random.rand(*original_data.shape)
+    return synthetic_data
+
+
+def ComputeDistance(a, b):
+    return np.linalg.norm(a - b)
+
+
+def initialisation(x, k):
+    np.random.seed(42)  # 设置随机数种子以保证每次运行结果的一致性
+    indices = np.random.choice(len(x), k, replace=False)
+    return x[indices]
+
+
+def computeClusterRepresentatives(clusters):
+    return np.array([np.mean(cluster, axis=0) if len(cluster) > 0 else None for cluster in clusters])
+
+
+def assignClusterIds(x, k, centroids):
+    clusters = [[] for _ in range(k)]
+    for point in x:
+        closest = np.argmin([ComputeDistance(point, centroid) for centroid in centroids])
+        clusters[closest].append(point)
+    return clusters
 
 
 def kMeans(x, k, maxIter=100):
-    np.random.seed(42)  # 确保初始化的可复现性
-    centroids = x[np.random.choice(len(x), k, replace=False)]
+    centroids = initialisation(x, k)
     for _ in range(maxIter):
-        clusters = [[] for _ in range(k)]
-        for point in x:
-            distances = np.linalg.norm(point - centroids, axis=1)
-            closest = np.argmin(distances)
-            clusters[closest].append(point)
-        new_centroids = np.array([np.mean(cluster, axis=0) for cluster in clusters])
-        if np.all(centroids == new_centroids):
+        clusters = assignClusterIds(x, k, centroids)
+        new_centroids = computeClusterRepresentatives(clusters)
+        if np.allclose(centroids, new_centroids, atol=1e-6, equal_nan=True):
             break
         centroids = new_centroids
-    # 为了兼容后续的Silhouette计算，返回聚类标签
-    labels = np.zeros(len(x))
-    for cluster_idx, cluster in enumerate(clusters):
-        for point in cluster:
-            point_idx = np.where(np.all(x == point, axis=1))[0][0]
-            labels[point_idx] = cluster_idx
-    return labels
+    return clusters, centroids
 
 
-def silhouette_score_manual(X, labels):
-    silhouette_scores = []
-    for idx, point in enumerate(X):
-        own_cluster = labels[idx]
-        a = np.mean([np.linalg.norm(point - other_point) for other_idx, other_point in enumerate(X) if
-                     labels[other_idx] == own_cluster and idx != other_idx]) if len(X[labels == own_cluster]) > 1 else 0
-        b = np.min([np.mean([np.linalg.norm(point - other_point) for other_idx, other_point in enumerate(X) if
-                             labels[other_idx] == cluster]) for cluster in set(labels) if
-                    cluster != own_cluster]) if len(set(labels)) > 1 else 0
-        silhouette_scores.append((b - a) / max(a, b) if max(a, b) > 0 else 0)
-    return np.mean(silhouette_scores)
+def computeSilhouette(x, clusters):
+    N = len(x)
+    # Create a full distance matrix
+    distMatrix = np.zeros((N, N))
+    for i in range(N):
+        for j in range(N):
+            if i != j:
+                distMatrix[i][j] = ComputeDistance(x[i], x[j])
+
+    silhouette = [0 for _ in range(N)]
+    a = [0 for _ in range(N)]
+    b = [math.inf for _ in range(N)]
+
+    # Modify to use correct indices
+    for i, point in enumerate(x):
+        point_index = i  # This is the index of the point in the dataset
+        for cluster_id, cluster in enumerate(clusters):
+            cluster_indices = [np.where(np.all(x == point, axis=1))[0][0] for point in
+                               cluster]  # Get indices of points in the cluster
+            if point_index in cluster_indices:
+                # Calculate a(i)
+                clusterSize = len(cluster_indices)
+                if clusterSize > 1:
+                    a[i] = np.sum(distMatrix[point_index, cluster_indices]) / (clusterSize - 1)
+            else:
+                # Calculate b(i) to the nearest cluster
+                if cluster_indices:
+                    tempb = np.sum(distMatrix[point_index, cluster_indices]) / len(cluster_indices)
+                    if tempb < b[i]:
+                        b[i] = tempb
+
+    # Calculate the silhouette score for each point
+    for i in range(N):
+        if a[i] != 0:
+            silhouette[i] = (b[i] - a[i]) / max(a[i], b[i])
+
+    # Return the average silhouette score
+    return np.mean(silhouette) if len(silhouette) > 0 else 0
 
 
-def plot_silhouttee(filepath):
-    original_data = load_dataset(filepath)
-    n_samples, n_features = original_data.shape
-    print(f"Original data has {n_samples} samples with {n_features} features each.")
-    X = np.random.rand(n_samples, n_features) * 2 - 1  # 生成合成数据
-    scores = []
-
+def plotSilhouette():
+    x = generate_synthetic_data()  # 使用合成数据而不是加载实际数据集
+    silhouette_scores = [0.0]  # Start with k=1, silhouette score is 0 by definition
     for k in range(2, 10):
-        labels = kMeans(X, k)
-        score = silhouette_score_manual(X, labels)
-        scores.append(score)
+        clusters, _ = kMeans(x, k)
+        score = computeSilhouette(x, [np.array(cluster) for cluster in clusters if cluster])  # 确保聚类不为空
+        silhouette_scores.append(score)
 
     plt.figure(figsize=(10, 6))
-    plt.plot(range(2, 10), scores, marker='o')
+    plt.plot(range(1, 10), silhouette_scores, marker='o')  # Start k from 1
     plt.xlabel('Number of clusters (k)')
     plt.ylabel('Silhouette Score')
-    plt.title('Silhouette Score for Synthetic Data with Different k')
+    plt.title('Silhouette Score for different k(Q2)')
+    plt.savefig('silhouette_scores.png')
     plt.show()
 
 
-# 使用文件名'dataset'调用函数
-plot_silhouttee('dataset')
+plotSilhouette()
