@@ -106,8 +106,8 @@ def plotSilhouette():
     plt.plot(range(1, 10), silhouette_scores, marker='o')  # Start k from 1
     plt.xlabel('Number of clusters (k)')
     plt.ylabel('Silhouette Score')
-    plt.title('Silhouette Score for different k(Q3)')
-    plt.savefig('silhouette_scores.png')
+    plt.title('Silhouette Score for KMeansplusplus(Q3)')
+    plt.savefig('Silhouette Score for KMeansplusplus(Q3).png')
     plt.show()
 
 

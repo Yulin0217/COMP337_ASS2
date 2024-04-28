@@ -122,8 +122,8 @@ def plotSilhouette():
     plt.plot(range(1, 10), silhouette_scores, marker='o')
     plt.xlabel('Number of clusters (s)')
     plt.ylabel('Silhouette Score')
-    plt.title('Silhouette Score for Bisecting k-Means')
-    plt.savefig('silhouette_scores_bisecting.png')
+    plt.title('Silhouette Score for BisectingKMeans(Q4)')
+    plt.savefig('Silhouette Score for BisectingKMeans(Q4).png')
     plt.show()
 
 plotSilhouette()

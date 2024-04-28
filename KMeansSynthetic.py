@@ -92,19 +92,19 @@ def computeSilhouette(x, clusters):
 
 
 def plotSilhouette():
-    x = generate_synthetic_data()  # 使用合成数据而不是加载实际数据集
+    x = generate_synthetic_data()
     silhouette_scores = [0.0]  # Start with k=1, silhouette score is 0 by definition
     for k in range(2, 10):
         clusters, _ = kMeans(x, k)
-        score = computeSilhouette(x, [np.array(cluster) for cluster in clusters if cluster])  # 确保聚类不为空
+        score = computeSilhouette(x, [np.array(cluster) for cluster in clusters if cluster])  #
         silhouette_scores.append(score)
 
     plt.figure(figsize=(10, 6))
     plt.plot(range(1, 10), silhouette_scores, marker='o')  # Start k from 1
     plt.xlabel('Number of clusters (k)')
     plt.ylabel('Silhouette Score')
-    plt.title('Silhouette Score for different k(Q2)')
-    plt.savefig('silhouette_scores.png')
+    plt.title('Silhouette Score for KMeansSynthetic(Q2)')
+    plt.savefig('Silhouette Score for KMeansSynthetic(Q2).png')
     plt.show()
 
 
